@@ -6,24 +6,26 @@ from nltk.tokenize import word_tokenize
 from nltk.corpus import stopwords
 from nltk.stem.porter import PorterStemmer
 
+NORMALISATION_MAP = {
+    'acct': 'account',
+    'accts': 'accounts',
+    'pls': 'please',
+    'plz': 'please',
+    'pwd': 'password',
+    'wout': 'without',
+    'emial': 'email',
+    'wat': 'what',
+    '2': 'to',
+    'cant': 'cannot',
+    'didnt': 'did not',
+    'doesnt': 'does not',
+    'dont': 'do not',
+    'wont': 'will not',
+    'isnt': 'is not',
+}
+
 class StemCleaner:  
-    NORMALISATION_MAP = {
-        'acct': 'account',
-        'accts': 'accounts',
-        'pls': 'please',
-        'plz': 'please',
-        'pwd': 'password',
-        'wout': 'without',
-        'emial': 'email',
-        'wat': 'what',
-        '2': 'to',
-        'cant': 'cannot',
-        'didnt': 'did not',
-        'doesnt': 'does not',
-        'dont': 'do not',
-        'wont': 'will not',
-        'isnt': 'is not',
-    }
+    NORMALISATION_MAP = NORMALISATION_MAP
     
     def __init__(self, data, norm=False, num=False, stop=False):
         self.data = data
@@ -85,23 +87,7 @@ class StemCleaner:
         return [' '.join(tokens) for tokens in stemmed_texts]
     
 class LemmaCleaner:  
-    NORMALISATION_MAP = {
-        'acct': 'account',    # ~45 occurrences
-        'accts': 'accounts',  # 1 occurrence
-        'pls': 'please',      # ~12 occurrences
-        'plz': 'please',
-        'pwd': 'password',    # 1 occurrence
-        'wout': 'without',    # w/out after punctuation removal
-        'emial': 'email',     # 8 occurrences
-        'wat': 'what',        # ~38 occurrences
-        '2': 'to',            # ~30 occurrences
-        'cant': 'cannot',     # 7 occurrences — expands so negation is preserved
-        'didnt': 'did not',   # 1 occurrence
-        'doesnt': 'does not',
-        'dont': 'do not',
-        'wont': 'will not',
-        'isnt': 'is not',
-    }
+    NORMALISATION_MAP = NORMALISATION_MAP
 
     def __init__(self, data, norm=False, num=False, stop=False):
         self.data = data
@@ -138,34 +124,29 @@ class LemmaCleaner:
             normalised.append(t)
         return normalised
     
-    def remove_stop_words(self, tokenised_texts):
-        cleaned_texts = []
-        for t in tokenised_texts:
-            cleaned_texts.append([w for w in t if w not in self.stop_words])
-        return cleaned_texts
-    
     def tokenise(self, texts):
         result = []
         for t in texts:
             doc = self.nlp(t)
-            tokens = [token.text for token in doc if token.text.strip()]
-            result.append(tokens)
+            result.append([token for token in doc if token.text.strip()])
         return result
 
     def remove_standalone_numerics(self, tokenised_texts):
         cleaned = []
         for t in tokenised_texts:
-            cleaned.append([w for w in t if not re.fullmatch(r'\d+', w)])
+            cleaned.append([tok for tok in t if not re.fullmatch(r'\d+', tok.text)])
         return cleaned
+
+    def remove_stop_words(self, tokenised_texts):
+        cleaned_texts = []
+        for t in tokenised_texts:
+            cleaned_texts.append([tok for tok in t if tok.text not in self.stop_words])
+        return cleaned_texts
 
     def lemmatise(self, tokenised_texts):
         result = []
         for tokens in tokenised_texts:
-            doc = self.nlp(' '.join(tokens))
-            result.append([
-                token.lemma_ for token in doc
-                if token.text.strip()
-            ])
+            result.append([tok.lemma_ for tok in tokens])
         return result
     
     def rejoin(self, lemmatised_texts):
