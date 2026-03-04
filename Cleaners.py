@@ -15,7 +15,6 @@ NORMALISATION_MAP = {
     'wout': 'without',
     'emial': 'email',
     'wat': 'what',
-    '2': 'to',
     'cant': 'cannot',
     'didnt': 'did not',
     'doesnt': 'does not',
@@ -24,13 +23,31 @@ NORMALISATION_MAP = {
     'isnt': 'is not',
 }
 
-class StemCleaner:  
+# Numerics that are informal substitutes for words — converted instead of deleted
+NUMERIC_WORD_MAP = {
+    '2': 'to',
+    '4': 'for',
+    '1': 'one',
+}
+
+# Collapsed contractions created by punctuation removal (e.g. can't -> cant)
+# that are missing from standard stopword lists
+COLLAPSED_CONTRACTIONS = {
+    'arent', 'couldnt', 'didnt', 'doesnt', 'dont', 'hadnt', 'hasnt',
+    'havent', 'hed', 'hes', 'id', 'ill', 'im', 'ive', 'isnt',
+    'itd', 'itll', 'mightnt', 'mustnt', 'neednt', 'shant', 'shed',
+    'shell', 'shes', 'shouldve', 'shouldnt', 'thatll', 'theyd',
+    'theyll', 'theyre', 'theyve', 'wasnt', 'wed', 'weve', 'werent',
+    'wont', 'wouldnt', 'youd', 'youll', 'youre', 'youve',
+}
+
+class StemCleaner:
     NORMALISATION_MAP = NORMALISATION_MAP
-    
+
     def __init__(self, data, norm=False, num=False, stop=False):
         self.data = data
         self.negations = {'not', 'no', 'cannot'}
-        self.stop_words = set(stopwords.words('english')) - self.negations
+        self.stop_words = (set(stopwords.words('english')) | COLLAPSED_CONTRACTIONS) - self.negations
 
         self.lowered = self.lowercase(self.data)
         self.punctuated = self.remove_punctuation(self.lowered)
@@ -67,15 +84,23 @@ class StemCleaner:
     def remove_standalone_numerics(self, tokenised_texts):
         cleaned = []
         for t in tokenised_texts:
-            cleaned.append([w for w in t if not re.fullmatch(r'\d+', w)])
+            new_tokens = []
+            for w in t:
+                if re.fullmatch(r'\d+', w):
+                    if w in NUMERIC_WORD_MAP:
+                        new_tokens.append(NUMERIC_WORD_MAP[w])
+                    # else: drop pure noise numerics (e.g. 48, 24)
+                else:
+                    new_tokens.append(w)
+            cleaned.append(new_tokens)
         return cleaned
-    
+
     def remove_stop_words(self, tokenised_texts):
         cleaned_texts = []
         for t in tokenised_texts:
             cleaned_texts.append([w for w in t if w not in self.stop_words])
         return cleaned_texts
-    
+
     def stem(self, cleaned_texts):
         porter = PorterStemmer()
         stemmed_texts = []
@@ -86,14 +111,14 @@ class StemCleaner:
     def rejoin(self, stemmed_texts):
         return [' '.join(tokens) for tokens in stemmed_texts]
     
-class LemmaCleaner:  
+class LemmaCleaner:
     NORMALISATION_MAP = NORMALISATION_MAP
 
     def __init__(self, data, norm=False, num=False, stop=False):
         self.data = data
         self.nlp = spacy.load("en_core_web_sm")
         self.negations = {'not', 'no', 'cannot'}
-        self.stop_words = set(self.nlp.Defaults.stop_words) - self.negations
+        self.stop_words = (set(self.nlp.Defaults.stop_words) | COLLAPSED_CONTRACTIONS) - self.negations
 
         self.lowered = self.lowercase(self.data)
         self.punctuated = self.remove_punctuation(self.lowered)
@@ -134,7 +159,17 @@ class LemmaCleaner:
     def remove_standalone_numerics(self, tokenised_texts):
         cleaned = []
         for t in tokenised_texts:
-            cleaned.append([tok for tok in t if not re.fullmatch(r'\d+', tok.text)])
+            new_tokens = []
+            for tok in t:
+                if re.fullmatch(r'\d+', tok.text):
+                    if tok.text in NUMERIC_WORD_MAP:
+                        # Re-process through spaCy to get a proper token with lemma
+                        replacement = self.nlp(NUMERIC_WORD_MAP[tok.text])[0]
+                        new_tokens.append(replacement)
+                    # else: drop pure noise numerics (e.g. 48, 24)
+                else:
+                    new_tokens.append(tok)
+            cleaned.append(new_tokens)
         return cleaned
 
     def remove_stop_words(self, tokenised_texts):
