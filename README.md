@@ -20,8 +20,8 @@ Both pipelines handle class imbalance, preserve negations during stop word remov
 ## 📁 Repository Structure
 
 ```
-├── BOW_Approach.ipynb        # Bag-of-Words pipeline
-├── Semantic_Approach.ipynb   # Semantic embedding pipeline
+├── Ablation_Study.ipynb      # Full ablation over preprocessing flags for both pipelines
+├── Cleaners.py               # Reusable text preprocessing classes (StemCleaner, LemmaCleaner)
 ├── cw_data.csv               # Dataset (text + label columns)
 └── README.md
 ```
@@ -42,10 +42,8 @@ python -m spacy download en_core_web_sm
 ## 🚀 Usage
 
 1. Clone the repo and navigate to the project folder
-2. Ensure `cw_data.csv` is in the same directory as the notebooks
-3. Open and run either notebook:
-   - `BOW_Approach.ipynb` — for the TF-IDF + LinearSVC pipeline
-   - `Semantic_Approach.ipynb` — for the Sentence Transformer + Random Forest pipeline
+2. Ensure `cw_data.csv` is in the same directory as the notebook
+3. Open and run `Ablation_Study.ipynb` — it evaluates both pipelines across all 8 preprocessing flag combinations and reports results with visualisations
 
 ---
 
